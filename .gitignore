@@ -3,3 +3,9 @@ node_modules
 .env
 
 /generated/prisma
+
+# AI Skills
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
