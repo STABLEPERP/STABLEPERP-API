@@ -14,7 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
-    "@prisma/client": "^7.9.1",
+    "@prisma/client": "^5.22.0",
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.112.1",
     "cors": "^2.8.6",
@@ -26,8 +26,8 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.2",
     "nodemon": "^3.1.14",
-    "prisma": "^7.9.1",
+    "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
-    "typescript": "^7.0.2"
+    "typescript": "^5.9.3"
   }
 }
