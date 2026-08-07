@@ -1,0 +1,634 @@
+{
+  "address": "7rubqTecWv5gDjwhiajw3tr7gfwZcDJvPvoZnBnr9uit",
+  "metadata": {
+    "name": "stableperp",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "initConfig",
+      "discriminator": [
+        23,
+        235,
+        115,
+        232,
+        168,
+        96,
+        1,
+        231
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "feeBps",
+          "type": "u16"
+        },
+        {
+          "name": "treasury",
+          "type": "pubkey"
+        },
+        {
+          "name": "buybackWallet",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "initFactory",
+      "discriminator": [
+        65,
+        136,
+        219,
+        177,
+        234,
+        197,
+        24,
+        39
+      ],
+      "accounts": [
+        {
+          "name": "factoryConfig",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "creationFee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initMarket",
+      "discriminator": [
+        33,
+        253,
+        15,
+        116,
+        89,
+        25,
+        127,
+        236
+      ],
+      "accounts": [
+        {
+          "name": "market",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "marketCreator",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "factoryConfig",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "underlyingMint",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "quoteMint",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "optionMint",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "collateralVault",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "quoteVault",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "tokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "systemProgram",
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "strike",
+          "type": "u64"
+        },
+        {
+          "name": "expiryTs",
+          "type": "i64"
+        },
+        {
+          "name": "exerciseWindowSecs",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "writeOption",
+      "discriminator": [
+        96,
+        144,
+        104,
+        51,
+        39,
+        132,
+        235,
+        38
+      ],
+      "accounts": [
+        {
+          "name": "market",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "writerPosition",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "collateralVault",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "writerUnderlyingAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "optionMint",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "escrowOptionVault",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "writer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "underlyingMint",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "tokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "systemProgram",
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "qty",
+          "type": "u64"
+        },
+        {
+          "name": "premiumAsk",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "buyOption",
+      "discriminator": [
+        242,
+        253,
+        221,
+        183,
+        67,
+        244,
+        140,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "market",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "writerPosition",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "escrowOptionVault",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "writerQuoteAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "buyerOptionAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "buyerQuoteAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "optionMint",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "quoteMint",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "systemProgram",
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "qty",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "exerciseOption",
+      "discriminator": [
+        231,
+        98,
+        131,
+        183,
+        245,
+        93,
+        122,
+        48
+      ],
+      "accounts": [
+        {
+          "name": "market",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "buyerOptionAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "collateralVault",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "buyerUnderlyingAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "quoteVault",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "buyerQuoteAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "optionMint",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "underlyingMint",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "quoteMint",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "systemProgram",
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "qty",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "FactoryConfig",
+      "discriminator": [
+        29,
+        197,
+        255,
+        232,
+        22,
+        128,
+        67,
+        26
+      ]
+    },
+    {
+      "name": "Market",
+      "discriminator": [
+        219,
+        190,
+        213,
+        55,
+        0,
+        227,
+        198,
+        154
+      ]
+    },
+    {
+      "name": "MarketCreator",
+      "discriminator": [
+        99,
+        10,
+        205,
+        188,
+        129,
+        140,
+        47,
+        242
+      ]
+    },
+    {
+      "name": "WriterPosition",
+      "discriminator": [
+        195,
+        252,
+        56,
+        77,
+        221,
+        13,
+        8,
+        69
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "buybackWallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "feeBps",
+            "type": "u16"
+          },
+          {
+            "name": "halted",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Market",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "underlyingMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quoteMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "strike",
+            "type": "u64"
+          },
+          {
+            "name": "expiryTs",
+            "type": "i64"
+          },
+          {
+            "name": "exerciseWindowSecs",
+            "type": "i64"
+          },
+          {
+            "name": "optionMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "splitNumerator",
+            "type": "u64"
+          },
+          {
+            "name": "splitDenominator",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WriterPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "writer",
+            "type": "pubkey"
+          },
+          {
+            "name": "lockedAmount",
+            "type": "u64"
+          },
+          {
+            "name": "mintedAmount",
+            "type": "u64"
+          },
+          {
+            "name": "premiumAsk",
+            "type": "u64"
+          },
+          {
+            "name": "filledAmount",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FactoryConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "creationFee",
+            "type": "u64"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketCreator",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "marketsCreated",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

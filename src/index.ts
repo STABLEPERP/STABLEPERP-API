@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
+import { startIndexer } from './indexer';
 
 dotenv.config();
 
@@ -67,7 +68,14 @@ app.get('/api/portfolio/:wallet', async (req: Request, res: Response) => {
   }
 });
 
-// Start the server
+// Start the server and Indexer
 app.listen(PORT, () => {
   console.log(`🚀 Stableperp API Server running on port ${PORT}`);
+  
+  // Start the background indexer in the same process
+  startIndexer().then(() => {
+    console.log('✅ Background Indexer initialized');
+  }).catch(err => {
+    console.error('❌ Failed to start background indexer:', err);
+  });
 });

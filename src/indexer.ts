@@ -1,10 +1,15 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { PrismaClient } from '@prisma/client';
-import dotenv from 'dotenv';
+import { Program, AnchorProvider, Idl, EventParser, BorshCoder } from '@coral-xyz/anchor';
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 
 dotenv.config();
 
 const prisma = new PrismaClient();
+
+// Use Helius or custom RPC in SOLANA_RPC_URL to avoid rate limits
 const RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 const PROGRAM_ID = process.env.STABLEPERP_PROGRAM_ID || '';
 
@@ -19,70 +24,107 @@ const programPublicKey = new PublicKey(PROGRAM_ID);
 console.log(`🔌 Connecting to Solana RPC at ${RPC_URL}`);
 console.log(`📡 Listening for events on Program: ${PROGRAM_ID}`);
 
-async function startIndexer() {
-  // Subscribe to logs emitted by the Stableperp Program
+// Load IDL
+const idlPath = path.join(__dirname, 'idl', 'stableperp.json');
+let idl: Idl;
+try {
+  idl = JSON.parse(fs.readFileSync(idlPath, 'utf8'));
+} catch (e) {
+  console.error('❌ Failed to load IDL at src/idl/stableperp.json. Did you copy it?');
+  process.exit(1);
+}
+
+const coder = new BorshCoder(idl);
+
+export async function startIndexer() {
   connection.onLogs(
     programPublicKey,
     async (logs, ctx) => {
       if (logs.err) {
-        // Transaction failed, ignore
-        return;
+        return; // Transaction failed, ignore
       }
 
       console.log(`\n🔔 New Transaction Detected: ${logs.signature}`);
       
       try {
-        // Fetch the parsed transaction details
-        // Note: Free RPCs might rate-limit this, so in production use a dedicated RPC
+        // Adding a slight delay can sometimes help if the RPC is lagging behind the log notification
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
         const tx = await connection.getParsedTransaction(logs.signature, {
           maxSupportedTransactionVersion: 0,
         });
 
-        if (!tx) return;
+        if (!tx) {
+          console.log(`⚠️ Transaction ${logs.signature} not found or not confirmed yet.`);
+          return;
+        }
 
-        // In a complete implementation, you would decode the instruction data using the Anchor IDL
-        // Here we detect standard interactions and log them to the database
         const signer = tx.transaction.message.accountKeys.find((k) => k.signer)?.pubkey.toBase58() || 'Unknown';
         
-        console.log(`👤 Signer: ${signer}`);
-        
-        // Mock recording a trade history event to Supabase/Prisma
-        // This will create a generic trade history record for demonstration
-        
-        // Find or create a dummy market if none exists
-        let market = await prisma.market.findFirst();
-        if (!market) {
-          market = await prisma.market.create({
-            data: {
-              address: PublicKey.unique().toBase58(),
-              symbol: 'SOL/USDC',
-              strike: 100,
-              expiry: new Date(Date.now() + 86400000), // +1 day
-              totalLiquidity: 1000,
-              premiumAsk: 5.5
+        // Find our program's instructions
+        const instructions = tx.transaction.message.instructions;
+        for (const ix of instructions) {
+          if (!('programId' in ix)) continue;
+          if (ix.programId.toBase58() !== PROGRAM_ID) continue;
+
+          // Parse instruction using Anchor coder
+          if (!('data' in ix)) continue; // Must be partially compiled instruction with data
+          const decoded = coder.instruction.decode(ix.data, 'base58');
+          
+          if (!decoded) continue;
+
+          console.log(`📜 Decoded Instruction: ${decoded.name}`);
+          
+          let action = '';
+          let quantity = 0;
+          let price = 0;
+
+          if (decoded.name === 'writeOption') {
+            action = 'WRITE';
+            quantity = (decoded.data as any).qty.toNumber();
+            price = (decoded.data as any).premiumAsk.toNumber(); // Stored in IDL as u64 (might be basis points or raw token amount)
+          } else if (decoded.name === 'buyOption') {
+            action = 'BUY';
+            quantity = (decoded.data as any).qty.toNumber();
+            // Price is not in buyOption args directly (it's taken from market), we'll default to 0 or fetch from market
+          }
+
+          if (action) {
+            // Find or create a dummy market if none exists (In production, the market account is passed in instruction)
+            let market = await prisma.market.findFirst();
+            if (!market) {
+              market = await prisma.market.create({
+                data: {
+                  address: PublicKey.unique().toBase58(), // Dummy address
+                  symbol: 'SOL/USDC',
+                  strike: 100,
+                  expiry: new Date(Date.now() + 86400000), // +1 day
+                  totalLiquidity: 1000,
+                  premiumAsk: price > 0 ? price : 5.5
+                }
+              });
             }
-          });
-        }
 
-        // Only record if this transaction hasn't been recorded yet
-        const existingTx = await prisma.tradeHistory.findUnique({
-          where: { txSignature: logs.signature }
-        });
+            // Check if already recorded
+            const existingTx = await prisma.tradeHistory.findUnique({
+              where: { txSignature: logs.signature }
+            });
 
-        if (!existingTx) {
-          await prisma.tradeHistory.create({
-            data: {
-              userAddress: signer,
-              marketId: market.id,
-              action: 'WRITE_OR_BUY', // This would be parsed from IDL instructions
-              quantity: 1,
-              price: 5.5,
-              txSignature: logs.signature,
+            if (!existingTx) {
+              await prisma.tradeHistory.create({
+                data: {
+                  userAddress: signer,
+                  marketId: market.id,
+                  action,
+                  quantity,
+                  price: price > 0 ? price : (market.premiumAsk || 0),
+                  txSignature: logs.signature,
+                }
+              });
+              console.log(`✅ Recorded ${action} transaction ${logs.signature} to database`);
             }
-          });
-          console.log(`✅ Recorded transaction ${logs.signature} to database`);
+          }
         }
-
       } catch (error) {
         console.error(`❌ Failed to process transaction ${logs.signature}:`, error);
       }
@@ -91,4 +133,3 @@ async function startIndexer() {
   );
 }
 
-startIndexer().catch(console.error);
