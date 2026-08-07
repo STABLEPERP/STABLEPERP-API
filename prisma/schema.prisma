@@ -16,6 +16,9 @@ model Market {
   expiry          DateTime
   totalLiquidity  Float             @default(0)
   premiumAsk      Float             @default(0)
+  optionMint      String?           // Option SPL Token Mint
+  underlyingMint  String?           // E.g. Wrapped SOL Mint
+  quoteMint       String?           // USDC Mint
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -44,4 +47,13 @@ model TradeHistory {
   price           Float
   txSignature     String   @unique // Solana transaction signature
   createdAt       DateTime @default(now())
+}
+
+model SystemLog {
+  id          String   @id @default(uuid())
+  level       String
+  message     String
+  environment String   // "dev" or "prod"
+  metadata    Json?
+  createdAt   DateTime @default(now())
 }

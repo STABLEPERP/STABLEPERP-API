@@ -1,9 +1,11 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import cors from 'cors';
+import morgan from 'morgan';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import { startIndexer } from './indexer';
+import { logger } from './logger';
 
 dotenv.config();
 
@@ -13,6 +15,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Add morgan middleware to log HTTP requests
+app.use(morgan('combined', {
+  stream: {
+    write: (message) => logger.info(message.trim())
+  }
+}));
 
 // Basic health check
 app.get('/', (req: Request, res: Response) => {
@@ -28,7 +37,7 @@ app.get('/api/markets', async (req: Request, res: Response) => {
     });
     res.json({ success: true, data: markets });
   } catch (error) {
-    console.error('Error fetching markets:', error);
+    logger.error('Error fetching markets:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch markets' });
   }
 });
@@ -63,19 +72,19 @@ app.get('/api/portfolio/:wallet', async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching portfolio:', error);
+    logger.error('Error fetching portfolio:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch portfolio' });
   }
 });
 
 // Start the server and Indexer
 app.listen(PORT, () => {
-  console.log(`🚀 Stableperp API Server running on port ${PORT}`);
+  logger.info(`🚀 Stableperp API Server running on port ${PORT}`);
   
   // Start the background indexer in the same process
   startIndexer().then(() => {
-    console.log('✅ Background Indexer initialized');
+    logger.info('✅ Background Indexer initialized');
   }).catch(err => {
-    console.error('❌ Failed to start background indexer:', err);
+    logger.error('❌ Failed to start background indexer:', err);
   });
 });

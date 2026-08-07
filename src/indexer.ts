@@ -4,6 +4,7 @@ import { Program, AnchorProvider, Idl, EventParser, BorshCoder } from '@coral-xy
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from './logger';
 
 dotenv.config();
 
@@ -14,15 +15,15 @@ const RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 const PROGRAM_ID = process.env.STABLEPERP_PROGRAM_ID || '';
 
 if (!PROGRAM_ID) {
-  console.error('❌ STABLEPERP_PROGRAM_ID is not set in .env');
+  logger.error('❌ STABLEPERP_PROGRAM_ID is not set in .env');
   process.exit(1);
 }
 
 const connection = new Connection(RPC_URL, 'confirmed');
 const programPublicKey = new PublicKey(PROGRAM_ID);
 
-console.log(`🔌 Connecting to Solana RPC at ${RPC_URL}`);
-console.log(`📡 Listening for events on Program: ${PROGRAM_ID}`);
+logger.info(`🔌 Connecting to Solana RPC at ${RPC_URL}`);
+logger.info(`📡 Listening for events on Program: ${PROGRAM_ID}`);
 
 // Load IDL
 const idlPath = path.join(__dirname, 'idl', 'stableperp.json');
@@ -30,7 +31,7 @@ let idl: Idl;
 try {
   idl = JSON.parse(fs.readFileSync(idlPath, 'utf8'));
 } catch (e) {
-  console.error('❌ Failed to load IDL at src/idl/stableperp.json. Did you copy it?');
+  logger.error('❌ Failed to load IDL at src/idl/stableperp.json. Did you copy it?');
   process.exit(1);
 }
 
@@ -44,7 +45,7 @@ export async function startIndexer() {
         return; // Transaction failed, ignore
       }
 
-      console.log(`\n🔔 New Transaction Detected: ${logs.signature}`);
+      logger.info(`\n🔔 New Transaction Detected: ${logs.signature}`);
       
       try {
         // Adding a slight delay can sometimes help if the RPC is lagging behind the log notification
@@ -55,7 +56,7 @@ export async function startIndexer() {
         });
 
         if (!tx) {
-          console.log(`⚠️ Transaction ${logs.signature} not found or not confirmed yet.`);
+          logger.warn(`⚠️ Transaction ${logs.signature} not found or not confirmed yet.`);
           return;
         }
 
@@ -73,7 +74,7 @@ export async function startIndexer() {
           
           if (!decoded) continue;
 
-          console.log(`📜 Decoded Instruction: ${decoded.name}`);
+          logger.info(`📜 Decoded Instruction: ${decoded.name}`);
           
           let action = '';
           let quantity = 0;
@@ -100,9 +101,13 @@ export async function startIndexer() {
                   strike: 100,
                   expiry: new Date(Date.now() + 86400000), // +1 day
                   totalLiquidity: 1000,
-                  premiumAsk: price > 0 ? price : 5.5
-                }
+                  premiumAsk: price > 0 ? price : 5.5,
+                  optionMint: PublicKey.unique().toBase58(),
+                  underlyingMint: PublicKey.unique().toBase58(),
+                  quoteMint: PublicKey.unique().toBase58()
+                } as any
               });
+              logger.info(`Created mock market for SOL/USDC inside indexer`);
             }
 
             // Check if already recorded
@@ -121,15 +126,14 @@ export async function startIndexer() {
                   txSignature: logs.signature,
                 }
               });
-              console.log(`✅ Recorded ${action} transaction ${logs.signature} to database`);
+              logger.info(`✅ Logged ${action} for ${signer} in tx ${logs.signature}`);
             }
           }
         }
-      } catch (error) {
-        console.error(`❌ Failed to process transaction ${logs.signature}:`, error);
+      } catch (err) {
+        logger.error(`❌ Error parsing transaction ${logs.signature}:`, err);
       }
     },
     'confirmed'
   );
 }
-

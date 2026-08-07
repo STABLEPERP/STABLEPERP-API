@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
     "start": "ts-node src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "init-market": "ts-node scripts/init-market.ts"
   },
   "keywords": [],
   "author": "",
@@ -14,15 +15,20 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@prisma/client": "^5.22.0",
+    "@solana/spl-token": "^0.4.15",
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.112.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "morgan": "^1.11.0",
+    "winston": "^3.19.0",
+    "winston-transport": "^4.9.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
     "@types/node": "^26.1.2",
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",

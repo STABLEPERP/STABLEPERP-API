@@ -87,6 +87,40 @@
       ]
     },
     {
+      "name": "addCreatorAllowlist",
+      "discriminator": [
+        194, 235, 14, 239, 246, 103, 211, 18
+      ],
+      "accounts": [
+        {
+          "name": "marketCreator",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "factoryConfig",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "creator",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "initMarket",
       "discriminator": [
         33,
