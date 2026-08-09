@@ -19,6 +19,9 @@ model Market {
   optionMint      String?           // Option SPL Token Mint
   underlyingMint  String?           // E.g. Wrapped SOL Mint
   quoteMint       String?           // USDC Mint
+  type            String            @default("crypto") // "crypto" or "us_stocks"
+  pythFeedId      String?           // Pyth Network Price Feed ID
+  isSynthetic     Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 

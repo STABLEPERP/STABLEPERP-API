@@ -206,6 +206,14 @@
         {
           "name": "exerciseWindowSecs",
           "type": "i64"
+        },
+        {
+          "name": "isSynthetic",
+          "type": "bool"
+        },
+        {
+          "name": "payoutCap",
+          "type": "u64"
         }
       ]
     },
@@ -587,6 +595,18 @@
           },
           {
             "name": "splitDenominator",
+            "type": "u64"
+          },
+          {
+            "name": "isSynthetic",
+            "type": "bool"
+          },
+          {
+            "name": "payoutCap",
+            "type": "u64"
+          },
+          {
+            "name": "settlementPrice",
             "type": "u64"
           }
         ]
