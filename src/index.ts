@@ -4,6 +4,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
+import https from 'https';
 import { startIndexer } from './indexer';
 import { logger } from './logger';
 
@@ -74,6 +75,47 @@ app.get('/api/portfolio/:wallet', async (req: Request, res: Response) => {
   } catch (error) {
     logger.error('Error fetching portfolio:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch portfolio' });
+  }
+});
+
+// GET /api/stocks/change
+// Fetch daily change percentages for US stocks via Yahoo Finance
+app.get('/api/stocks/change', async (req: Request, res: Response) => {
+  const symbols = (req.query.symbols as string || '').split(',').filter(Boolean);
+  if (symbols.length === 0) return res.json({ success: true, data: {} });
+
+  try {
+    const promises = symbols.map(sym => new Promise<{symbol: string, change24h: number, volume24h: number}>((resolve, reject) => {
+      https.get(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}`, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (response) => {
+        let data = '';
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            const meta = json?.chart?.result?.[0]?.meta;
+            if (meta && meta.regularMarketPrice && meta.previousClose) {
+              const change24h = ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100;
+              resolve({ symbol: sym, change24h, volume24h: meta.regularMarketVolume || 0 });
+            } else {
+              resolve({ symbol: sym, change24h: 0, volume24h: 0 });
+            }
+          } catch (e) {
+            resolve({ symbol: sym, change24h: 0, volume24h: 0 });
+          }
+        });
+      }).on('error', () => resolve({ symbol: sym, change24h: 0, volume24h: 0 }));
+    }));
+
+    const results = await Promise.all(promises);
+    const dataMap: Record<string, {change24h: number, volume24h: number}> = {};
+    results.forEach(r => {
+      dataMap[r.symbol] = { change24h: r.change24h, volume24h: r.volume24h };
+    });
+
+    res.json({ success: true, data: dataMap });
+  } catch (error) {
+    logger.error('Error fetching stock changes:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch stock changes' });
   }
 });
 
