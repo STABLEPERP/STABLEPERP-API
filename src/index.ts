@@ -5,7 +5,9 @@ import morgan from 'morgan';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import https from 'https';
+import cron from 'node-cron';
 import { startIndexer } from './indexer';
+import { generateOptionChains } from './auto-chain-generator';
 import { logger } from './logger';
 
 dotenv.config();
@@ -132,4 +134,14 @@ app.listen(PORT, () => {
   }).catch(err => {
     logger.error('❌ Failed to start background indexer:', err);
   });
+
+  // Schedule the Auto Option Chain Generator
+  const cronSchedule = process.env.CRON_SCHEDULE || '0 0 * * *';
+  cron.schedule(cronSchedule, () => {
+    logger.info('⏰ Running Scheduled Auto Option Chain Generator...');
+    generateOptionChains().catch(err => {
+      logger.error('❌ Scheduled Option Chain Generator Failed:', err);
+    });
+  });
+  logger.info(`⏰ Auto Option Chain Generator scheduled with cron: '${cronSchedule}'`);
 });

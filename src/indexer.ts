@@ -160,9 +160,15 @@ function setupListener(conn: Connection, progId: PublicKey, network: string, pro
 }
 
 export async function startIndexer() {
-  setupListener(connectionDevnet, programPublicKeyDevnet, 'devnet', PROGRAM_ID_DEVNET);
+  const mode = process.env.INDEXER_MODE || 'both'; // 'devnet', 'mainnet', or 'both'
+
+  if (mode === 'devnet' || mode === 'both') {
+    setupListener(connectionDevnet, programPublicKeyDevnet, 'devnet', PROGRAM_ID_DEVNET);
+    logger.info('🚀 Devnet Indexer Started');
+  }
   
-  if (connectionMainnet && programPublicKeyMainnet) {
+  if ((mode === 'mainnet' || mode === 'both') && connectionMainnet && programPublicKeyMainnet) {
     setupListener(connectionMainnet, programPublicKeyMainnet, 'mainnet', PROGRAM_ID_MAINNET);
+    logger.info('🚀 Mainnet Indexer Started');
   }
 }
