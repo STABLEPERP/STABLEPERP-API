@@ -32,8 +32,10 @@ app.get('/', (req: Request, res: Response) => {
 // GET /api/markets
 // Fetch all active markets with their liquidity and current premium
 app.get('/api/markets', async (req: Request, res: Response) => {
+  const network = (req.query.network as string) || 'devnet';
   try {
     const markets = await prisma.market.findMany({
+      where: { network },
       orderBy: { createdAt: 'desc' }
     });
     res.json({ success: true, data: markets });
@@ -47,6 +49,7 @@ app.get('/api/markets', async (req: Request, res: Response) => {
 // Fetch positions and trade history for a specific wallet
 app.get('/api/portfolio/:wallet', async (req: Request, res: Response) => {
   const wallet = req.params.wallet as string;
+  const network = (req.query.network as string) || 'devnet';
   
   if (!wallet) {
     return res.status(400).json({ success: false, error: 'Wallet address is required' });
@@ -54,13 +57,13 @@ app.get('/api/portfolio/:wallet', async (req: Request, res: Response) => {
 
   try {
     const positions = await prisma.optionPosition.findMany({
-      where: { ownerAddress: wallet },
+      where: { ownerAddress: wallet, network },
       include: { market: true },
       orderBy: { createdAt: 'desc' }
     });
 
     const trades = await prisma.tradeHistory.findMany({
-      where: { userAddress: wallet },
+      where: { userAddress: wallet, network },
       include: { market: true },
       orderBy: { createdAt: 'desc' }
     });

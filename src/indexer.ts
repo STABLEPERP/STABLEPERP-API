@@ -11,19 +11,38 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 // Use Helius or custom RPC in SOLANA_RPC_URL to avoid rate limits
-const RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
-const PROGRAM_ID = process.env.STABLEPERP_PROGRAM_ID || '';
+const RPC_URL_DEVNET = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+const PROGRAM_ID_DEVNET = process.env.STABLEPERP_PROGRAM_ID || '';
 
-if (!PROGRAM_ID) {
+const RPC_URL_MAINNET = process.env.SOLANA_RPC_URL_MAINNET || 'https://api.mainnet-beta.solana.com';
+const PROGRAM_ID_MAINNET = process.env.STABLEPERP_PROGRAM_ID_MAINNET || '';
+
+if (!PROGRAM_ID_DEVNET) {
   logger.error('❌ STABLEPERP_PROGRAM_ID is not set in .env');
   process.exit(1);
 }
 
-const connection = new Connection(RPC_URL, 'confirmed');
-const programPublicKey = new PublicKey(PROGRAM_ID);
+const connectionDevnet = new Connection(RPC_URL_DEVNET, 'confirmed');
+const programPublicKeyDevnet = new PublicKey(PROGRAM_ID_DEVNET);
 
-logger.info(`🔌 Connecting to Solana RPC at ${RPC_URL}`);
-logger.info(`📡 Listening for events on Program: ${PROGRAM_ID}`);
+let connectionMainnet: Connection | null = null;
+let programPublicKeyMainnet: PublicKey | null = null;
+
+if (PROGRAM_ID_MAINNET && PROGRAM_ID_MAINNET.length >= 32) {
+  connectionMainnet = new Connection(RPC_URL_MAINNET, 'confirmed');
+  try {
+    programPublicKeyMainnet = new PublicKey(PROGRAM_ID_MAINNET);
+  } catch (e) {
+    logger.warn('⚠️ Invalid Mainnet Program ID, mainnet indexer will not run.');
+  }
+}
+
+logger.info(`🔌 Connecting to Devnet RPC at ${RPC_URL_DEVNET}`);
+logger.info(`📡 Listening for Devnet events on Program: ${PROGRAM_ID_DEVNET}`);
+if (connectionMainnet && programPublicKeyMainnet) {
+  logger.info(`🔌 Connecting to Mainnet RPC at ${RPC_URL_MAINNET}`);
+  logger.info(`📡 Listening for Mainnet events on Program: ${PROGRAM_ID_MAINNET}`);
+}
 
 // Load IDL
 const idlPath = path.join(__dirname, 'idl', 'stableperp.json');
@@ -37,21 +56,21 @@ try {
 
 const coder = new BorshCoder(idl);
 
-export async function startIndexer() {
-  connection.onLogs(
-    programPublicKey,
+function setupListener(conn: Connection, progId: PublicKey, network: string, progIdStr: string) {
+  conn.onLogs(
+    progId,
     async (logs, ctx) => {
       if (logs.err) {
         return; // Transaction failed, ignore
       }
 
-      logger.info(`\n🔔 New Transaction Detected: ${logs.signature}`);
+      logger.info(`\n🔔 New Transaction Detected (${network}): ${logs.signature}`);
       
       try {
         // Adding a slight delay can sometimes help if the RPC is lagging behind the log notification
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        const tx = await connection.getParsedTransaction(logs.signature, {
+        const tx = await conn.getParsedTransaction(logs.signature, {
           maxSupportedTransactionVersion: 0,
         });
 
@@ -66,7 +85,7 @@ export async function startIndexer() {
         const instructions = tx.transaction.message.instructions;
         for (const ix of instructions) {
           if (!('programId' in ix)) continue;
-          if (ix.programId.toBase58() !== PROGRAM_ID) continue;
+          if (ix.programId.toBase58() !== progIdStr) continue;
 
           // Parse instruction using Anchor coder
           if (!('data' in ix)) continue; // Must be partially compiled instruction with data
@@ -92,7 +111,7 @@ export async function startIndexer() {
 
           if (action) {
             // Find or create a dummy market if none exists (In production, the market account is passed in instruction)
-            let market = await prisma.market.findFirst();
+            let market = await prisma.market.findFirst({ where: { network } });
             if (!market) {
               market = await prisma.market.create({
                 data: {
@@ -104,10 +123,11 @@ export async function startIndexer() {
                   premiumAsk: price > 0 ? price : 5.5,
                   optionMint: PublicKey.unique().toBase58(),
                   underlyingMint: PublicKey.unique().toBase58(),
-                  quoteMint: PublicKey.unique().toBase58()
+                  quoteMint: PublicKey.unique().toBase58(),
+                  network
                 } as any
               });
-              logger.info(`Created mock market for SOL/USDC inside indexer`);
+              logger.info(`Created mock market for SOL/USDC inside indexer (${network})`);
             }
 
             // Check if already recorded
@@ -124,16 +144,25 @@ export async function startIndexer() {
                   quantity,
                   price: price > 0 ? price : (market.premiumAsk || 0),
                   txSignature: logs.signature,
+                  network
                 }
               });
-              logger.info(`✅ Logged ${action} for ${signer} in tx ${logs.signature}`);
+              logger.info(`✅ Logged ${action} for ${signer} in tx ${logs.signature} (${network})`);
             }
           }
         }
       } catch (err) {
-        logger.error(`❌ Error parsing transaction ${logs.signature}:`, err);
+        logger.error(`❌ Error parsing transaction ${logs.signature} (${network}):`, err);
       }
     },
     'confirmed'
   );
+}
+
+export async function startIndexer() {
+  setupListener(connectionDevnet, programPublicKeyDevnet, 'devnet', PROGRAM_ID_DEVNET);
+  
+  if (connectionMainnet && programPublicKeyMainnet) {
+    setupListener(connectionMainnet, programPublicKeyMainnet, 'mainnet', PROGRAM_ID_MAINNET);
+  }
 }

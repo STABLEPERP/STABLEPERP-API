@@ -22,6 +22,7 @@ model Market {
   type            String            @default("crypto") // "crypto" or "us_stocks"
   pythFeedId      String?           // Pyth Network Price Feed ID
   isSynthetic     Boolean           @default(false)
+  network         String            @default("devnet") // "devnet" or "mainnet"
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -36,6 +37,7 @@ model OptionPosition {
   market          Market   @relation(fields: [marketId], references: [id])
   quantity        Float
   positionType    String   // "WRITTEN" or "BOUGHT"
+  network         String   @default("devnet") // "devnet" or "mainnet"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -49,6 +51,7 @@ model TradeHistory {
   quantity        Float
   price           Float
   txSignature     String   @unique // Solana transaction signature
+  network         String   @default("devnet") // "devnet" or "mainnet"
   createdAt       DateTime @default(now())
 }
 
