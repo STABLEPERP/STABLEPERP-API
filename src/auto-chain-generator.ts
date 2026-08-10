@@ -10,21 +10,30 @@ import { logger } from './logger';
 const prisma = new PrismaClient();
 
 // In a real production scenario, base prices should be dynamically fetched from Pyth Network.
-// For this MVP, we use static base prices for demo purposes.
 const stocks = [
-  { symbol: 'TSLA', basePrice: 200, isSynthetic: true },
-  { symbol: 'AAPL', basePrice: 150, isSynthetic: true },
-  { symbol: 'NVDA', basePrice: 900, isSynthetic: true },
-  { symbol: 'MSFT', basePrice: 400, isSynthetic: true },
-  { symbol: 'AMZN', basePrice: 180, isSynthetic: true },
-  { symbol: 'GOOGL', basePrice: 160, isSynthetic: true },
-  { symbol: 'META', basePrice: 480, isSynthetic: true },
-  { symbol: 'NFLX', basePrice: 600, isSynthetic: true },
-  { symbol: 'AMD', basePrice: 160, isSynthetic: true },
-  { symbol: 'COIN', basePrice: 200, isSynthetic: true },
-  { symbol: 'SPY', basePrice: 510, isSynthetic: true },
-  { symbol: 'QQQ', basePrice: 440, isSynthetic: true },
-  { symbol: 'GME', basePrice: 20, isSynthetic: true },
+  { symbol: 'TSLA', basePrice: 200, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'AAPL', basePrice: 150, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'NVDA', basePrice: 900, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'MSFT', basePrice: 400, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'AMZN', basePrice: 180, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'GOOGL', basePrice: 160, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'META', basePrice: 480, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'NFLX', basePrice: 600, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'AMD', basePrice: 160, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'COIN', basePrice: 200, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'SPY', basePrice: 510, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'QQQ', basePrice: 440, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'GME', basePrice: 20, isSynthetic: true, type: 'us_stocks' },
+  { symbol: 'BTC', basePrice: 65000, isSynthetic: false, type: 'crypto' },
+  { symbol: 'SOL', basePrice: 150, isSynthetic: false, type: 'crypto' },
+  { symbol: 'ETH', basePrice: 3500, isSynthetic: false, type: 'crypto' },
+  { symbol: 'JUP', basePrice: 1.00, isSynthetic: false, type: 'crypto' },
+  { symbol: 'JTO', basePrice: 2.50, isSynthetic: false, type: 'crypto' },
+  { symbol: 'PYTH', basePrice: 0.30, isSynthetic: false, type: 'crypto' },
+  { symbol: 'WIF', basePrice: 1.50, isSynthetic: false, type: 'crypto' },
+  { symbol: 'BONK', basePrice: 0.00002, isSynthetic: false, type: 'crypto' },
+  { symbol: 'RAY', basePrice: 2.00, isSynthetic: false, type: 'crypto' },
+  { symbol: 'RENDER', basePrice: 6.00, isSynthetic: false, type: 'crypto' },
 ];
 
 export async function generateOptionChains() {
@@ -108,9 +117,11 @@ export async function generateOptionChains() {
           const strikePriceRaw = stock.basePrice * mult;
           const strike = Math.round(strikePriceRaw * 1e6);
           
+          const marketSymbol = stock.isSynthetic ? `${stock.symbol}x/USDC` : `${stock.symbol}/USDC`;
+
           const existingMarket = await prisma.market.findFirst({
               where: {
-                  symbol: `${stock.symbol}x/USDC`,
+                  symbol: marketSymbol,
                   strike: strikePriceRaw,
                   network: networkTag
               }
@@ -165,14 +176,14 @@ export async function generateOptionChains() {
             await prisma.market.create({
               data: {
                 address: marketPda.toBase58(),
-                symbol: `${stock.symbol}x/USDC`,
+                symbol: marketSymbol,
                 strike: strikePriceRaw,
                 expiry: new Date(expiryTs * 1000),
                 isSynthetic: stock.isSynthetic,
                 underlyingMint: underlyingMint.toBase58(),
                 quoteMint: quoteMint.toBase58(),
                 optionMint: optionMintPda.toBase58(),
-                type: "us_stocks",
+                type: stock.type,
                 premiumAsk: stock.basePrice * 0.05, 
                 totalLiquidity: 0,
                 network: networkTag,

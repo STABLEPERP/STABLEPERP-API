@@ -2,7 +2,7 @@ import winston from 'winston';
 import { PrismaTransport } from './prismaTransport';
 
 const customFormat = winston.format.printf(({ level, message, timestamp, ...metadata }) => {
-  let msg = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+  let msg = `[${timestamp}] [${level}] ${message}`;
   if (Object.keys(metadata).length > 0) {
     msg += ` ${JSON.stringify(metadata)}`;
   }
