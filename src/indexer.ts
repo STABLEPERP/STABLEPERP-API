@@ -110,27 +110,23 @@ function setupListener(conn: Connection, progId: PublicKey, network: string, pro
           }
 
           if (action) {
-            // Find or create a dummy market if none exists (In production, the market account is passed in instruction)
-            let market = await prisma.market.findFirst({ where: { network } });
-            if (!market) {
-              market = await prisma.market.create({
-                data: {
-                  address: PublicKey.unique().toBase58(), // Dummy address
-                  symbol: 'SOL/USDC',
-                  strike: 100,
-                  expiry: new Date(Date.now() + 86400000), // +1 day
-                  totalLiquidity: 1000,
-                  premiumAsk: price > 0 ? price : 5.5,
-                  optionMint: PublicKey.unique().toBase58(),
-                  underlyingMint: PublicKey.unique().toBase58(),
-                  quoteMint: PublicKey.unique().toBase58(),
-                  network
-                } as any
-              });
-              logger.info(`Created mock market for SOL/USDC inside indexer (${network})`);
+            // In both writeOption and buyOption, the market is the first account (index 0)
+            let marketAddress = '';
+            if ('accounts' in ix && ix.accounts.length > 0) {
+              marketAddress = ix.accounts[0].toBase58();
             }
 
-            // Check if already recorded
+            if (!marketAddress) {
+              logger.warn(`⚠️ Cannot extract market address from instruction ${decoded.name}`);
+              continue;
+            }
+
+            let market = await prisma.market.findFirst({ where: { address: marketAddress, network } });
+            
+            if (!market) {
+              logger.warn(`⚠️ Market ${marketAddress} not found in database for ${network}. Skipping trade history.`);
+              continue;
+            }            // Check if already recorded
             const existingTx = await prisma.tradeHistory.findUnique({
               where: { txSignature: logs.signature }
             });

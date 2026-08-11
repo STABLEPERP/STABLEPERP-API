@@ -36,8 +36,14 @@ const stocks = [
   { symbol: 'RENDER', basePrice: 6.00, isSynthetic: false, type: 'crypto' },
 ];
 
-export async function generateOptionChains() {
-  const envMode = process.env.AUTO_CHAIN_MODE || 'devnet';
+export interface ChainGeneratorOptions {
+  type?: 'us_stocks' | 'crypto' | 'all';
+  symbol?: string;
+  forceNetwork?: string;
+}
+
+export async function generateOptionChains(options: ChainGeneratorOptions = {}) {
+  const envMode = options.forceNetwork || process.env.AUTO_CHAIN_MODE || 'devnet';
   
   if (envMode === 'off') {
     logger.info('🛑 Auto Option Chain Generator is OFF');
@@ -105,11 +111,31 @@ export async function generateOptionChains() {
     const strikeMultipliers = [0.95, 0.975, 1.0, 1.025, 1.05]; 
     const networkTag = mode === 'mainnet' ? 'mainnet-beta' : 'devnet';
 
-    for (const stock of stocks) {
+    let targetStocks = stocks;
+    if (options.symbol) {
+      targetStocks = stocks.filter(s => s.symbol.toUpperCase() === options.symbol?.toUpperCase());
+    } else if (options.type && options.type !== 'all') {
+      targetStocks = stocks.filter(s => s.type === options.type);
+    }
+
+    if (targetStocks.length === 0) {
+      logger.warn(`⚠️ No stocks matched the filter criteria.`);
+      continue;
+    }
+
+    for (const stock of targetStocks) {
       logger.info(`\n📈 Processing Option Chain for ${stock.symbol}...`);
-      
-      const underlyingMint = await createMint(connection, payer, payer.publicKey, null, 6);
-      
+      const marketSymbol = stock.isSynthetic ? `${stock.symbol}x/USDC` : `${stock.symbol}/USDC`;
+      const baseMarket = await prisma.market.findFirst({
+        where: { symbol: marketSymbol, network: networkTag }
+      });
+
+      if (!baseMarket || !baseMarket.underlyingMint) {
+        logger.warn(`⚠️ No base market or underlyingMint found for ${stock.symbol} on ${networkTag}. Run init-markets script first. Skipping.`);
+        continue;
+      }
+
+      const underlyingMint = new PublicKey(baseMarket.underlyingMint);
       for (const days of expiryDays) {
         const expiryTs = Math.floor(Date.now() / 1000) + days * 24 * 60 * 60;
         
@@ -117,8 +143,7 @@ export async function generateOptionChains() {
           const strikePriceRaw = stock.basePrice * mult;
           const strike = Math.round(strikePriceRaw * 1e6);
           
-          const marketSymbol = stock.isSynthetic ? `${stock.symbol}x/USDC` : `${stock.symbol}/USDC`;
-
+          
           const existingMarket = await prisma.market.findFirst({
               where: {
                   symbol: marketSymbol,
